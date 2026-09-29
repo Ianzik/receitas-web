@@ -1,0 +1,13 @@
+/* Device copy only. Google credentials are never persisted. */
+const CatalogCache=(()=>{
+ const name='receitas-device:'+location.pathname.replace(/[^/]*$/,'')+':'+window.RECIPE_CONFIG.spreadsheetId;
+ const ready=new Promise((resolve,reject)=>{
+  if(typeof indexedDB==='undefined'){reject(Error('Armazenamento indisponível.'));return;}
+  const r=indexedDB.open(name,1);
+  r.onupgradeneeded=()=>r.result.createObjectStore('cache');
+  r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error);
+ });
+ ready.catch(()=>{});
+ async function run(mode,action){const db=await ready;return new Promise((resolve,reject)=>{const tx=db.transaction('cache',mode);let r;tx.oncomplete=()=>resolve(r?.result);tx.onerror=tx.onabort=()=>reject(tx.error||Error('Falha no armazenamento.'));r=action(tx.objectStore('cache'));});}
+ return {get:key=>run('readonly',s=>s.get(key)),put:(key,value)=>run('readwrite',s=>s.put(value,key)),clear:()=>run('readwrite',s=>s.clear())};
+})();

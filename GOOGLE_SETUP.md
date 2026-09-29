@@ -8,7 +8,7 @@ Esta integração está preparada, mas ainda precisa de um cliente OAuth e de um
 4. Copie apenas o **ID do cliente**, terminado em `.apps.googleusercontent.com`, para `clientId` em `config.js`. Não coloque segredo de cliente, senha ou token no repositório.
 5. Autorize o aplicativo, teste leitura, fotos, edição e atualização da planilha e então publique esta versão no GitHub Pages.
 
-O código pede os escopos `spreadsheets` e `drive.readonly`. Essas permissões permitem editar planilhas e ler arquivos da conta, não ficam restritas apenas a este caderno. O aplicativo usa somente a planilha configurada e os IDs das fotos nela registrados. A aprovação acontece na tela do Google. Os tokens ficam apenas na memória da página e expiram. Fechar/recarregar a página exige entrar novamente.
+O código pede os escopos `spreadsheets` e `drive.readonly`. Essas permissões permitem editar planilhas e ler arquivos da conta, não ficam restritas apenas a este caderno. O aplicativo usa somente a planilha configurada e os IDs das fotos nela registrados. A aprovação acontece na tela do Google. Os tokens ficam apenas na memória da página e expiram. Ao reabrir, o aplicativo mostra a cópia das receitas guardada neste aparelho. As fotos carregadas também ficam salvas. Atualizar ou salvar pede autorização Google quando necessário. A opção Sair e apagar cópia deste aparelho remove receitas e fotos locais. A cópia pode ficar desatualizada até usar Atualizar caderno. Tokens e senhas nunca são guardados no armazenamento persistente.
 
 O site público contém código e identificadores de configuração. As receitas e fotos continuam privadas no Google. Não publicar a planilha na Web nem alterar o compartilhamento para “qualquer pessoa”.
 
