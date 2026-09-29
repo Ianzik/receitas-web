@@ -1,0 +1,19 @@
+name: Google catalog tests
+on:
+  push:
+    branches: [codex/google-sheets]
+  pull_request:
+jobs:
+  catalog:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node tests/google-store.cjs
+      - run: npm install --no-save playwright
+      - run: npx playwright install --with-deps chromium
+      - run: node tests/google-browser.cjs
