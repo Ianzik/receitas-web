@@ -4,3 +4,5 @@
 [hidden]{display:none!important}.storage-note{padding:14px 18px;background:#edf2ed;border-radius:12px;color:#244e42;font-size:14px;line-height:1.6;margin:0 0 24px}
 
 .detail-img{height:auto;aspect-ratio:16/9}
+
+.ingredient-section{font-size:14px;color:var(--green);margin:20px 0 6px}.ingredient-section:first-of-type{margin-top:12px}

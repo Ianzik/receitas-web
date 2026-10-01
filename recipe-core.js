@@ -22,6 +22,39 @@ const RecipeCore = (() => {
     const found=names(text), options=norm(text).split(/\b(?:ou|or)\b/).map(names);
     return {text,names:found.length?found:[text.replace(/^[\d\s.,/¼½¾⅓⅔⅛]+/,'')||text],optional:/\b(opcional|optional)\b/.test(norm(text)),alternatives:options.length>1&&options.every(x=>x.length)?options:[],recognized:!!found.length,section:''};
   }
+  const sectionLabels={molho:'Para o molho',carne:'Para a carne',frango:'Para o frango',massa:'Para a massa',recheio:'Para o recheio',base:'Para a base',montagem:'Para a montagem',caldo:'Para o caldo',pesto:'Para o pesto',salmao:'Para o salmão',legumes:'Para os legumes',bifum:'Para o bifum',almondegas:'Para as almôndegas',coleslaw:'Para o coleslaw',finalizacao:'Para finalizar'};
+  const sectionName=s=>String(s||'').trim().replace(/^[^\p{L}\p{N}]+/u,'').replace(/\s*:\s*$/,'');
+  const sectionKey=s=>{const key=norm(sectionName(s)).replace(/^para (?:o|a|os|as)\s+/,'');return key==='para finalizar'?'finalizacao':key;};
+  function ingredientParts(i){
+    let text=String(i.text||'').trim(),section=sectionName(i.section);
+    for(let depth=0;depth<5;depth++){const prefix=text.match(/^(.+?)(?::|\s+[–—-]\s+)\s*(.+)$/);if(!prefix)break;
+      if(!(section&&sectionKey(prefix[1])===sectionKey(section))&&!sectionLabels[sectionKey(prefix[1])]&&!/^para (?:o|a|os|as)\s+/i.test(prefix[1]))break;
+      section=sectionName(prefix[1]);text=prefix[2].replace(/^[\s•*–-]+/,'').trim();
+    }
+    return {text,section};
+  }
+  const ingredientSection=i=>ingredientParts(i).section;
+  const ingredientText=i=>ingredientParts(i).text;
+  function ingredientGroups(ingredients){
+    const grouped=new Map();
+    for(const i of ingredients){const raw=ingredientSection(i),key=sectionKey(raw);if(!grouped.has(key))grouped.set(key,{section:raw?(sectionLabels[key]||raw):'',items:[]});grouped.get(key).items.push(i);}
+    return [...grouped.values()];
+  }
+  function formatIngredients(ingredients){
+    const grouped=ingredientGroups(ingredients),hasSections=grouped.some(g=>g.section);
+    return grouped.map(g=>[...(hasSections?[(g.section||'Ingredientes gerais')+':']:[]),...g.items.map(ingredientText)].join('\n')).join('\n\n');
+  }
+  function parseIngredients(text){
+    let section='';const result=[];
+    for(const raw of String(text||'').split('\n')){const line=raw.trim();if(!line)continue;
+      const heading=sectionName(line),key=sectionKey(heading),inline=line.match(/^(.+?):\s*(.+)$/);
+      if(inline&&(sectionLabels[sectionKey(inline[1])]||/^para (?:o|a|os|as)\s+/i.test(inline[1]))){section=sectionName(inline[1]);result.push({...ingredient(inline[2]),section});continue;}
+      if(norm(heading)==='ingredientes gerais'){section='';continue;}
+      if((/:\s*$/.test(line)&&heading.length<100&&!/^[\d¼½¾⅓⅔⅛]/.test(heading)&&!heading.includes(':'))||(/^para (?:o|a|os|as)\s+/i.test(heading)&&!/[\d:]/.test(heading))||norm(heading)==='para finalizar'){section=heading;continue;}
+      result.push({...ingredient(line),section});
+    }
+    return result;
+  }
   function validate(value) {
     if (!value || typeof value!=='object' || typeof value.title!=='string' || !value.title.trim()) throw Error('Receita sem nome.');
     if (!Array.isArray(value.ingredients)||value.ingredients.length>250) throw Error('Lista de ingredientes inválida.');
@@ -71,7 +104,7 @@ const RecipeCore = (() => {
       if(norm(line)===norm(title))continue;
       if(/^(rendimento|porcoes|serve|tempo de preparo)\s*:/.test(norm(line))){const [key,...v]=line.split(':');r[norm(key)==='tempo de preparo'?'time':'servings']=v.join(':').trim();continue;}
       if(/^(https?:|#|@)/.test(line))continue;
-      if(mode==='i'&&/^para (o|a|os|as)\b/.test(norm(line))){section=line;continue;}
+      if((/^para (o|a|os|as)\b/.test(norm(line))&&!/[\d.,;]/.test(line)&&line.length<100)||norm(sectionName(line))==='para finalizar'){section=sectionName(line);mode='i';continue;}
       const action=/^(?:\d+[.)]?\s*)?(adicione|aqueca|asse|bata|coloque|cozinhe|corte|doure|escorra|ferva|frite|junte|leve|misture|pique|refogue|retire|reserve|sirva|tempere|deixe|derreta|mexa|add|bake|cook|mix|heat|serve)\b/.test(norm(line));
       if(action||mode==='s'){r.steps.push(line.replace(/^\d+[.)]\s*/,''));mode='s';}
       else if(mode==='i'||(/^[\d¼½¾•*-]/.test(raw)&&names(line).length)){r.ingredients.push({...ingredient(line),section});}
@@ -81,5 +114,5 @@ const RecipeCore = (() => {
     r.warnings.push('Organização simples no navegador. Confira o texto original antes de salvar.');
     return r;
   }
-  return {ready,norm,ingredient,validate,match,parse,get ingredients(){return Object.keys(groups)}};
+  return {ready,norm,ingredient,ingredientText,ingredientGroups,formatIngredients,parseIngredients,validate,match,parse,get ingredients(){return Object.keys(groups)}};
 })();

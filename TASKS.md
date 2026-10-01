@@ -69,3 +69,15 @@ Planilha atualizada em 65 receitas, somente J/N. Releitura integral confirmou 16
 Relatórios privados: recuperadas.csv com as 65 novas capas, revisar-segunda-busca.csv com as 66 pendências e os motivos; TASKS-recuperacao.md e capturas. Nada disso exige execução no computador do usuário. Após abrir a versão atualizada, Atualizar caderno traz os metadados novos para a cópia do aparelho.
 
 A conferência também mostrou parágrafos inteiros no campo de porções de algumas receitas e registros sem ingredientes catalogados. Esses dados foram preservados; valem uma revisão separada dos textos importados.
+
+## Ingredientes por seção e conferência do Panelinha
+
+- [x] Preservar código na branch backup/pre-ingredient-groups-20261001 e duplicar a aba Antes de agrupar ingredientes.
+- [x] Identificar repetição em 57 receitas: seção em cada item e prefixo também no texto.
+- [x] Agrupar os ingredientes sob um único título, limpar apenas o prefixo da seção na exibição e manter quantidades e alternativas.
+- [x] Preservar os grupos na leitura, edição, salvamento e normalização de novas receitas.
+- [x] Conferir por busca pública e pelo catálogo as receitas identificadas do Panelinha: 35 registros, todos já com thumb local. As novas buscas não confirmaram nenhuma receita pendente adicional desse site.
+- [ ] Atualizar a coluna B em 57 receitas, preservando os metadados originais, e verificar a releitura.
+- [ ] Publicar, executar os testes e conferir o detalhe em desktop e celular.
+
+As listas passam a ter Para o molho, Para a carne e outros títulos uma única vez por grupo. O agrupamento une seções equivalentes mesmo quando os itens estavam intercalados. O nome da seção nunca vira um ingrediente na busca. Não há novas imagens nesta passagem; permanecem 94 thumbs e 66 fallbacks.

@@ -36,12 +36,12 @@ const GoogleStore = (() => {
   function decode(row,index){
     let meta={};try{meta=JSON.parse(row[13]||'{}')}catch{throw Error('Metadados inválidos na linha '+(index+1)+'. Corrija a célula antes de editar a receita.');}
     const ingredientText=String(row[1]||'');
-    const ingredients=ingredientText===(meta.ingredients||[]).map(i=>i.text).join('\n')?meta.ingredients:lines(ingredientText).map(RecipeCore.ingredient);
+    const ingredients=ingredientText===(meta.ingredients||[]).map(i=>i.text).join('\n')||ingredientText===RecipeCore.formatIngredients(meta.ingredients||[])?meta.ingredients:RecipeCore.parseIngredients(ingredientText);
     const r={...meta,title:String(row[0]||''),ingredients:ingredients||[],steps:lines(row[2]),tags:String(row[3]||'').split(',').map(s=>s.trim()).filter(Boolean),servings:String(row[4]||''),time:String(row[5]||''),source_url:String(row[6]||''),favorite:bool(row[7]),reviewed:bool(row[8]),thumbnail:RecipeThumbnails.path(row[9]),id:String(row[10]||'row:'+index),original:String(row[11]||''),warnings:lines(row[12]),_snapshot:canonical(row)};
     if(String(row[2]||'')===(meta.steps||[]).join('\n'))r.steps=meta.steps||[];
     return r;
   }
-  function encode(value,deleted=false){const {_snapshot,...data}=value;const r=RecipeCore.validate(RecipeThumbnails.clean(data));if(r.id.startsWith('row:'))r.id=crypto.randomUUID();return [r.title,r.ingredients.map(i=>i.text).join('\n'),r.steps.join('\n'),r.tags.join(', '),r.servings||'',r.time||'',r.source_url||'',!!r.favorite,!!r.reviewed,r.thumbnail||'',r.id,r.original||'',r.warnings.join('\n'),JSON.stringify(r),deleted];}
+  function encode(value,deleted=false){const {_snapshot,...data}=value;const r=RecipeCore.validate(RecipeThumbnails.clean(data));if(r.id.startsWith('row:'))r.id=crypto.randomUUID();return [r.title,RecipeCore.formatIngredients(r.ingredients),r.steps.join('\n'),r.tags.join(', '),r.servings||'',r.time||'',r.source_url||'',!!r.favorite,!!r.reviewed,r.thumbnail||'',r.id,r.original||'',r.warnings.join('\n'),JSON.stringify(r),deleted];}
   async function refresh(){await RecipeCore.ready;const current=epoch,rows=await readRows();const ids=new Set();const list=[];rows.slice(1).forEach((row,i)=>{if(!row[0]||bool(row[14]))return;const r=decode(row,i+1);if(ids.has(r.id))throw Error('Há identificadores de receita duplicados na planilha. Corrija antes de editar.');ids.add(r.id);list.push(r);});if(epoch!==current)throw Error('A sessão foi encerrada.');records=await RecipeThumbnails.attach(list);await remember();return {recipes:structuredClone(records),ingredients:RecipeCore.ingredients};}
   async function save(value,deleted=false){
     if(busy)throw Error('Aguarde o salvamento em andamento.');busy=true;const current=epoch;
@@ -66,7 +66,7 @@ const GoogleStore = (() => {
       case '/api/search':{let list=records.filter(r=>RecipeCore.norm(r.title+' '+r.tags.join(' ')).includes(RecipeCore.norm(data.query||''))).map(r=>({...r,...RecipeCore.match(r,data.ingredients,data.basics)}));if(data.ingredients.length)list=list.filter(r=>r.matched.some(n=>data.ingredients.some(i=>RecipeCore.norm(i)===RecipeCore.norm(n))));list.sort((a,b)=>(data.ingredients.length?(b.score-a.score||a.missing.length-b.missing.length):0)||a.title.localeCompare(b.title,'pt-BR'));return {recipes:structuredClone(list)};}
       case '/api/save':return save(data);
       case '/api/delete':{const r=records.find(r=>r.id===data.id);if(!r)throw Error('Receita não encontrada.');await save(r,true);return {ok:true};}
-      case '/api/normalize':return {ingredients:lines(data.text).map(RecipeCore.ingredient)};
+      case '/api/normalize':return {ingredients:RecipeCore.parseIngredients(data.text)};
       case '/api/extract':if(data.url)throw Error('Cole o texto da receita. Guarde o link no campo de origem.');return RecipeCore.parse(data.text||'',data.title);
       default:throw Error('Esta função não está disponível na base Google.');
     }
