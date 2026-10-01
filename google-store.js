@@ -1,25 +1,24 @@
 /* Private Google catalog with a device copy. Tokens remain in memory only. */
 const GoogleStore = (() => {
-  const HEADERS=['Título','Ingredientes','Preparo','Categorias','Rendimento','Tempo','Origem','Favorita','Revisada','Fotos no Drive','ID','Texto original','Avisos','Metadados','Excluída'];
+  const HEADERS=['Título','Ingredientes','Preparo','Categorias','Rendimento','Tempo','Origem','Favorita','Revisada','Thumb local','ID','Texto original','Avisos','Metadados','Excluída'];
   let token='',expires=0,records=[],tokenClient,busy=false,epoch=0;
-  const blobs=new Map(),pending=new Map();
   let hasCache=false,savedAt=0,persistent=true;
   const cache=typeof CatalogCache!=='undefined'?CatalogCache:{get:async()=>null,put:async()=>{},clear:async()=>{}};
-  const cacheReady=cache.get('catalog').then(value=>{if(value?.version===1&&Array.isArray(value.recipes)){records=value.recipes;hasCache=true;savedAt=value.savedAt||0;}}).catch(()=>{persistent=false;});
+  const cacheReady=cache.get('catalog').then(async value=>{if(value?.version===1&&Array.isArray(value.recipes)){records=await RecipeThumbnails.attach(value.recipes);hasCache=true;savedAt=value.savedAt||0;}}).catch(()=>{persistent=false;});
   async function remember(){hasCache=true;savedAt=Date.now();try{await cache.put('catalog',{version:1,recipes:records,savedAt});persistent=true;}catch{persistent=false;}}
   const config=()=>window.RECIPE_CONFIG||{};
   const lines=s=>String(s||'').split('\n').map(s=>s.trim()).filter(Boolean);
   const bool=v=>v===true||/^(true|verdadeiro|sim|1)$/i.test(String(v));
   const canonical=row=>JSON.stringify(Array.from({length:15},(_,i)=>row[i]??''));
   const authenticated=()=>!!token&&Date.now()<expires;
-  function clear(){token='';expires=0;records=[];epoch++;for(const url of blobs.values())URL.revokeObjectURL(url);blobs.clear();pending.clear();}
+  function clear(){token='';expires=0;records=[];epoch++;}
   function expire(){token='';expires=0;window.dispatchEvent(new Event('recipe-connection-changed'));}
   function configured(){if(!config().clientId||!config().spreadsheetId)throw Error('A conexão Google ainda precisa ser configurada.');}
   async function login(){
     configured();
     if(!window.google?.accounts?.oauth2)throw Error('O login Google ainda está carregando. Tente novamente.');
     return new Promise((resolve,reject)=>{
-      tokenClient=google.accounts.oauth2.initTokenClient({client_id:config().clientId,scope:'https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/drive.readonly',include_granted_scopes:false,
+      tokenClient=google.accounts.oauth2.initTokenClient({client_id:config().clientId,scope:'https://www.googleapis.com/auth/spreadsheets',include_granted_scopes:false,
         callback:r=>{if(r.error){reject(Error('O Google não autorizou o acesso.'));return;}token=r.access_token;expires=Date.now()+(Number(r.expires_in)-60)*1000;resolve({ok:true});},
         error_callback:()=>reject(Error('Não foi possível concluir o login Google. Abra o login novamente.'))});
       tokenClient.requestAccessToken({prompt:''});
@@ -33,17 +32,17 @@ const GoogleStore = (() => {
     return response;
   }
   const sheetUrl=()=>`https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(config().spreadsheetId)}/values/`;
-  async function readRows(){const response=await request(sheetUrl()+encodeURIComponent('Receitas!A1:O')+'?valueRenderOption=UNFORMATTED_VALUE');const {values=[]}=await response.json();if(JSON.stringify(values[0])!==JSON.stringify(HEADERS))throw Error('As colunas da planilha mudaram. Restaure os nomes do cabeçalho antes de continuar.');return values;}
+  async function readRows(){const response=await request(sheetUrl()+encodeURIComponent('Receitas!A1:O')+'?valueRenderOption=UNFORMATTED_VALUE');const {values=[]}=await response.json();if(values[0]?.length!==HEADERS.length||values[0].some((name,i)=>i!==9&&name!==HEADERS[i]))throw Error('As colunas da planilha mudaram. Restaure os nomes do cabeçalho antes de continuar.');return values;}
   function decode(row,index){
     let meta={};try{meta=JSON.parse(row[13]||'{}')}catch{throw Error('Metadados inválidos na linha '+(index+1)+'. Corrija a célula antes de editar a receita.');}
     const ingredientText=String(row[1]||'');
     const ingredients=ingredientText===(meta.ingredients||[]).map(i=>i.text).join('\n')?meta.ingredients:lines(ingredientText).map(RecipeCore.ingredient);
-    const r={...meta,title:String(row[0]||''),ingredients:ingredients||[],steps:lines(row[2]),tags:String(row[3]||'').split(',').map(s=>s.trim()).filter(Boolean),servings:String(row[4]||''),time:String(row[5]||''),source_url:String(row[6]||''),favorite:bool(row[7]),reviewed:bool(row[8]),images:lines(row[9]),id:String(row[10]||'row:'+index),original:String(row[11]||''),warnings:lines(row[12]),_snapshot:canonical(row)};
+    const r={...meta,title:String(row[0]||''),ingredients:ingredients||[],steps:lines(row[2]),tags:String(row[3]||'').split(',').map(s=>s.trim()).filter(Boolean),servings:String(row[4]||''),time:String(row[5]||''),source_url:String(row[6]||''),favorite:bool(row[7]),reviewed:bool(row[8]),thumbnail:RecipeThumbnails.path(row[9]),id:String(row[10]||'row:'+index),original:String(row[11]||''),warnings:lines(row[12]),_snapshot:canonical(row)};
     if(String(row[2]||'')===(meta.steps||[]).join('\n'))r.steps=meta.steps||[];
     return r;
   }
-  function encode(value,deleted=false){const {_snapshot,...data}=value;const r=RecipeCore.validate(data);if(r.id.startsWith('row:'))r.id=crypto.randomUUID();return [r.title,r.ingredients.map(i=>i.text).join('\n'),r.steps.join('\n'),r.tags.join(', '),r.servings||'',r.time||'',r.source_url||'',!!r.favorite,!!r.reviewed,r.images.join('\n'),r.id,r.original||'',r.warnings.join('\n'),JSON.stringify(r),deleted];}
-  async function refresh(){await RecipeCore.ready;const current=epoch,rows=await readRows();const ids=new Set();const list=[];rows.slice(1).forEach((row,i)=>{if(!row[0]||bool(row[14]))return;const r=decode(row,i+1);if(ids.has(r.id))throw Error('Há identificadores de receita duplicados na planilha. Corrija antes de editar.');ids.add(r.id);list.push(r);});if(epoch!==current)throw Error('A sessão foi encerrada.');records=list;await remember();return {recipes:structuredClone(records),ingredients:RecipeCore.ingredients};}
+  function encode(value,deleted=false){const {_snapshot,...data}=value;const r=RecipeCore.validate(RecipeThumbnails.clean(data));if(r.id.startsWith('row:'))r.id=crypto.randomUUID();return [r.title,r.ingredients.map(i=>i.text).join('\n'),r.steps.join('\n'),r.tags.join(', '),r.servings||'',r.time||'',r.source_url||'',!!r.favorite,!!r.reviewed,r.thumbnail||'',r.id,r.original||'',r.warnings.join('\n'),JSON.stringify(r),deleted];}
+  async function refresh(){await RecipeCore.ready;const current=epoch,rows=await readRows();const ids=new Set();const list=[];rows.slice(1).forEach((row,i)=>{if(!row[0]||bool(row[14]))return;const r=decode(row,i+1);if(ids.has(r.id))throw Error('Há identificadores de receita duplicados na planilha. Corrija antes de editar.');ids.add(r.id);list.push(r);});if(epoch!==current)throw Error('A sessão foi encerrada.');records=await RecipeThumbnails.attach(list);await remember();return {recipes:structuredClone(records),ingredients:RecipeCore.ingredients};}
   async function save(value,deleted=false){
     if(busy)throw Error('Aguarde o salvamento em andamento.');busy=true;const current=epoch;
     try{
@@ -54,13 +53,6 @@ const GoogleStore = (() => {
       await request(sheetUrl()+path,{method:index>0?'PUT':'POST',body:JSON.stringify({values:[row]})});
       if(epoch!==current)throw Error('A sessão foi encerrada. Atualize o caderno após entrar novamente.');const result=decode(row,index>0?index:rows.length);records=records.filter(r=>r.id!==value.id);if(!deleted)records.push(result);await remember();return structuredClone(result);
     }finally{busy=false;}
-  }
-  async function photo(id){
-    if(!/^[-\w]{10,}$/.test(id))throw Error('Foto inválida.');
-    if(blobs.has(id))return blobs.get(id);if(pending.has(id))return pending.get(id);
-    const current=epoch;
-    const work=(async()=>{let stored;try{stored=await cache.get('photo:'+id)}catch{}if(stored&&epoch===current){const url=URL.createObjectURL(stored);blobs.set(id,url);return url;}const response=await request(`https://www.googleapis.com/drive/v3/files/${encodeURIComponent(id)}?alt=media`);const blob=await response.blob();if(epoch!==current)throw Error('Sessão encerrada.');if(!/^image\/(jpeg|png|webp|gif)$/.test(blob.type))throw Error('Arquivo de foto inválido.');try{await cache.put('photo:'+id,blob)}catch{}if(epoch!==current)throw Error('Sessão encerrada.');const url=URL.createObjectURL(blob);blobs.set(id,url);return url;})();
-    pending.set(id,work);try{return await work}finally{pending.delete(id)}
   }
   async function api(path,data){
     await Promise.all([RecipeCore.ready,cacheReady]);
@@ -79,5 +71,5 @@ const GoogleStore = (() => {
       default:throw Error('Esta função não está disponível na base Google.');
     }
   }
-  return {api,photo,HEADERS,decode,encode,connect:()=>authenticated()?Promise.resolve():login()};
+  return {api,HEADERS,decode,encode,connect:()=>authenticated()?Promise.resolve():login()};
 })();

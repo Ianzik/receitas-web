@@ -1,7 +1,7 @@
 name: Google catalog tests
 on:
   push:
-    branches: [codex/google-sheets]
+    branches: [main, codex/local-thumbnails]
   pull_request:
 jobs:
   catalog:
@@ -13,6 +13,11 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install -r scripts/requirements.txt
+      - run: python scripts/test_thumbs.py
       - run: node tests/google-store.cjs
       - run: npm install --no-save playwright
       - run: npx playwright install --with-deps chromium
