@@ -27,7 +27,7 @@ WebP local em 16:9, até 640×360 e abaixo de 60 KB. Caminho `thumbnail` em J/N 
 - Campo images nos registros ativos, leitura de arquivos do Drive, fila/observer de fotos, blobs e escopo Drive no login.
 - As 22 imagens antigas serão apenas arquivadas no backup privado (14.324.166 bytes), sem exclusão definitiva. Não há imagem antiga a apagar do repositório.
 
-## Resultado e verificação
+## Resultado da primeira passagem
 
 Publicado no GitHub Pages pela PR #4. 160 receitas ativas processadas, 109 links únicos: 29 miniaturas locais e 131 fallbacks. Instagram: 15 capas obtidas de 16 links; o restante estava indisponível. WebP: 883.784 bytes no total, cada arquivo abaixo de 60 KB. Fotos anteriores: 14.324.166 bytes, preservadas em backup; 1 arquivo de código removido (`browser-store.js`) e 22 fotos arquivadas, nenhuma foto excluída definitivamente.
 
@@ -53,11 +53,19 @@ Há origens apontando para produtos, acompanhamentos ou páginas diferentes da r
 - [x] Recuperar capas das páginas originais, catálogo público do autor e publicações equivalentes do mesmo autor.
 - [x] Gerar WebP local e preservar links e conteúdo das receitas.
 - [x] Testar lote, link individual, idempotência e persistência da origem confirmada na planilha.
-- [ ] Publicar, aplicar J/N, reler e conferir visualmente desktop/celular.
-- [ ] Entregar relatórios privados de recuperadas e pendências e capturas.
+- [x] Publicar, aplicar J/N, reler e conferir visualmente desktop/celular.
+- [x] Preparar relatórios privados de recuperadas e pendências e capturas para entrega.
 
 Resultado desta busca: 65 novas capas; 94 de 160 receitas com thumb, 66 fallbacks. Imagens locais: 3.267.052 bytes. Nenhum arquivo antigo adicional removido. O método anterior já tinha sido retirado na primeira migração. As imagens assinadas do Instagram foram baixadas; nenhuma URL temporária é usada no card.
 
 Buscas nos índices públicos localizaram fontes que a leitura direta não alcançava. O servidor oficial img.youtube.com funcionou para os vídeos originais. Catálogo Roti, páginas Panelinha e Lena Mattar e publicações correspondentes dos próprios autores permitiram recuperar outras capas. Receitas com origem ausente ou incorreta ganharam referência de proveniência somente nos metadados. As demais mantêm fallback; imagens de receitas diferentes foram rejeitadas.
 
 Não confirmado nesta passagem: obtenção das imagens de três receitas de Brian Lagerstrom cujas páginas foram identificadas. O download direto retornou 403 neste ambiente; uma imagem abriu no navegador, mas o download de mídia não produziu arquivo. Também não foi possível confirmar capas das demais pendências por link ou título. O relatório privado registra esses motivos.
+
+Segunda passagem publicada no commit `f27c1590267bb8e54c9687622c6f63821227f708`. Google catalog tests e Pages build/deployment concluídos com sucesso. Cinco testes de Python passaram, incluindo lote, link individual e nova execução sem o mapa de origens. JavaScript e Chromium passaram no GitHub Actions.
+
+Planilha atualizada em 65 receitas, somente J/N. Releitura integral confirmou 160 receitas ativas, 94 caminhos locais e 66 fallbacks. Todos os valores corresponderam à atualização esperada; formatos, validações e chips foram preservados. Capturas do aplicativo publicado com catálogo em memória confirmaram desktop (iframe de 1280 px, área útil de 1265 px) e celular (iframe de 390 px, área útil de 375 px), 94 imagens, 66 fallbacks e ausência de overflow horizontal. Fallback visível em ambas as capturas. Nenhum erro do aplicativo foi observado; o navegador registrou somente mensagens de sua extensão.
+
+Relatórios privados: recuperadas.csv com as 65 novas capas, revisar-segunda-busca.csv com as 66 pendências e os motivos; TASKS-recuperacao.md e capturas. Nada disso exige execução no computador do usuário. Após abrir a versão atualizada, Atualizar caderno traz os metadados novos para a cópia do aparelho.
+
+A conferência também mostrou parágrafos inteiros no campo de porções de algumas receitas e registros sem ingredientes catalogados. Esses dados foram preservados; valem uma revisão separada dos textos importados.
