@@ -1,0 +1,12 @@
+<!doctype html><html lang="pt-BR"><meta charset="utf-8"><title>Conferência visual das receitas</title><style>body{margin:0;background:#f7f6f0;font:13px Arial;color:#244e42}.tools{padding:12px;text-align:center}iframe{border:0;display:block;margin:0 auto;height:1000px;max-width:100%}button{margin-left:10px}input{max-width:280px}</style><div class="tools">Conferência visual · catálogo local em memória · sem salvar alterações <input id="fixture" type="file" accept="application/json"><button id="desktop">Desktop</button><button id="mobile">Celular 390 px</button></div><iframe id="preview" title="Projeto de receitas em execução" width="1280"></iframe><script>
+const preview=document.getElementById('preview');document.getElementById('desktop').onclick=()=>preview.width='1280';document.getElementById('mobile').onclick=()=>preview.width='390';
+document.getElementById('fixture').onchange=async event=>{
+ const records=JSON.parse(await event.target.files[0].text());
+ if(!Array.isArray(records))throw Error('O catálogo deve ser uma lista.');
+ const html=await (await fetch('../index.html',{cache:'no-cache'})).text();const doc=new DOMParser().parseFromString(html,'text/html');
+ doc.querySelectorAll('script').forEach(s=>{if(/accounts.google.com|config\.js|catalog-cache\.js|google-store\.js/.test(s.getAttribute('src')||''))s.remove();});
+ const base=doc.createElement('base');base.href=new URL('../',location.href).href;doc.head.prepend(base);
+ const mock=doc.createElement('script');mock.textContent=`const fixture=${JSON.stringify(records).replace(/</g,'\\u003c')};const GoogleStore={connect:async()=>{},api:async(path,data={})=>{await RecipeCore.ready;if(path==='/api/status')return {authenticated:false,cached:true,persistent:true,savedAt:0};if(path==='/api/recipes'||path==='/api/refresh')return {recipes:fixture,ingredients:RecipeCore.ingredients};if(path==='/api/search'){let list=fixture.filter(r=>RecipeCore.norm(r.title+' '+r.tags.join(' ')).includes(RecipeCore.norm(data.query||''))).map(r=>({...r,...RecipeCore.match(r,data.ingredients,data.basics)}));if(data.ingredients.length)list=list.filter(r=>r.matched.some(n=>data.ingredients.some(i=>RecipeCore.norm(i)===RecipeCore.norm(n))));list.sort((a,b)=>(data.ingredients.length?(b.score-a.score||a.missing.length-b.missing.length):0)||a.title.localeCompare(b.title,'pt-BR'));return {recipes:list};}throw Error('Conferência visual: alterações desativadas.');}};`;
+ doc.head.prepend(mock);preview.srcdoc='<!doctype html>'+doc.documentElement.outerHTML;
+};
+</script></html>
