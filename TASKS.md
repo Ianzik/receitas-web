@@ -77,7 +77,15 @@ A conferência também mostrou parágrafos inteiros no campo de porções de alg
 - [x] Agrupar os ingredientes sob um único título, limpar apenas o prefixo da seção na exibição e manter quantidades e alternativas.
 - [x] Preservar os grupos na leitura, edição, salvamento e normalização de novas receitas.
 - [x] Conferir por busca pública e pelo catálogo as receitas identificadas do Panelinha: 35 registros, todos já com thumb local. As novas buscas não confirmaram nenhuma receita pendente adicional desse site.
-- [ ] Atualizar a coluna B em 57 receitas, preservando os metadados originais, e verificar a releitura.
-- [ ] Publicar, executar os testes e conferir o detalhe em desktop e celular.
+- [x] Atualizar a coluna B em 57 receitas, preservando os metadados originais, e verificar a releitura.
+- [x] Publicar, executar os testes e conferir o detalhe em desktop e celular.
 
 As listas passam a ter Para o molho, Para a carne e outros títulos uma única vez por grupo. O agrupamento une seções equivalentes mesmo quando os itens estavam intercalados. O nome da seção nunca vira um ingrediente na busca. Não há novas imagens nesta passagem; permanecem 94 thumbs e 66 fallbacks.
+
+Validação final desta passagem: 57 células de ingredientes atualizadas em Receitas!B2:B163. Releitura de A1:O163 confirmou todas as outras células e formatos preservados. Os 57 registros mantiveram o número de ingredientes na conversão para o texto por grupos. Backup nativo: Antes de agrupar ingredientes.
+
+Publicado no commit 0cbe347899ab6b4eab7bfeb4786194a6d31ebb85. Google catalog tests e Pages build/deployment concluídos com sucesso. O teste de navegador verifica grupos intercalados, edição e salvamento sem perda de metadados. Sua primeira execução consultava o resultado antes de o salvamento terminar; foi corrigido para aguardar a conclusão.
+
+Conferência visual do aplicativo publicado com catálogo privado em memória: desktop de 1280 px e celular de 390 px, sem overflow horizontal. Frango Teriyaki mostra Para o molho uma vez, com seis itens, e Para o frango uma vez, com quatro itens. Capturas privadas: ingredientes-desktop.jpg e ingredientes-celular.jpg. Nenhuma nova imagem ou remoção de arquivo nesta passagem; peso das 94 thumbs antes e depois: 3.267.052 bytes.
+
+Não confirmado nesta passagem: nova autenticação Google no navegador e renderização nativa da planilha. A planilha foi verificada pela API, incluindo os formatos; a interface do aplicativo foi conferida com a cópia privada em memória. A busca pública não confirmou novas correspondências entre as 66 pendências e receitas do Panelinha. Permanecem os problemas de porções contendo parágrafos e registros incompletos já anotados.
