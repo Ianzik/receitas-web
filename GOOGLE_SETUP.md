@@ -2,19 +2,19 @@
 
 Esta integração está preparada, mas ainda precisa de um cliente OAuth e de um teste com a conta proprietária antes de ser publicada.
 
-1. No Google Cloud, crie ou escolha um projeto e ative **Google Sheets API** e **Google Drive API**.
+1. No Google Cloud, crie ou escolha um projeto e ative **Google Sheets API**.
 2. No Google Auth Platform, configure o aplicativo como externo, em teste, e adicione apenas a sua conta como usuário de teste.
 3. Crie um cliente OAuth do tipo **Aplicativo da Web**, com a origem JavaScript autorizada `https://ianzik.github.io`. Não inclua `/receitas-web/` na origem. O fluxo usa uma janela de autorização e não precisa de um servidor de redirecionamento.
 4. Copie apenas o **ID do cliente**, terminado em `.apps.googleusercontent.com`, para `clientId` em `config.js`. Não coloque segredo de cliente, senha ou token no repositório.
-5. Autorize o aplicativo, teste leitura, fotos, edição e atualização da planilha e então publique esta versão no GitHub Pages.
+5. Autorize o aplicativo, teste leitura, miniaturas, edição e atualização da planilha e então publique esta versão no GitHub Pages.
 
-O código pede os escopos `spreadsheets` e `drive.readonly`. Essas permissões permitem editar planilhas e ler arquivos da conta, não ficam restritas apenas a este caderno. O aplicativo usa somente a planilha configurada e os IDs das fotos nela registrados. A aprovação acontece na tela do Google. Os tokens ficam apenas na memória da página e expiram. Ao reabrir, o aplicativo mostra a cópia das receitas guardada neste aparelho. As fotos carregadas também ficam salvas. Atualizar ou salvar pede autorização Google quando necessário. A opção Sair e apagar cópia deste aparelho remove receitas e fotos locais. A cópia pode ficar desatualizada até usar Atualizar caderno. Tokens e senhas nunca são guardados no armazenamento persistente.
+O código pede somente `spreadsheets`. Tokens ficam na memória, nunca no armazenamento persistente. A cópia das receitas permite consultar sem repetir login; atualizar ou salvar solicita autorização quando necessário. Sair remove o catálogo deste aparelho.
 
-O site público contém código e identificadores de configuração. As receitas e fotos continuam privadas no Google. Não publicar a planilha na Web nem alterar o compartilhamento para “qualquer pessoa”.
+As receitas e a planilha continuam privadas. O repositório contém código e WebP de capas obtidas dos links de origem. O manifesto contém hashes e caminhos, sem textos privados ou URLs de origem. Não publique a planilha, o JSON privado ou credenciais.
 
 ## Atualizar receitas
 
-Use o aplicativo ou peça a atualização pelo chat. A aba `Receitas` tem uma receita por linha. As colunas A:I são campos de edição usuais. J guarda IDs das fotos, K identifica a receita, L preserva o original, M guarda avisos, N preserva campos estruturados e O permite recuperar exclusões.
+Use o aplicativo ou peça a atualização pelo chat. A aba `Receitas` tem uma receita por linha. As colunas A:I são campos de edição usuais. J (`Thumb local`) guarda o caminho WebP, K identifica a receita, L preserva o original, M guarda avisos, N preserva campos estruturados e O permite recuperar exclusões.
 
 Preserve os títulos do cabeçalho. Use uma linha por ingrediente e uma linha por etapa. Não altere IDs existentes. Para adicionar pelo chat, gere um ID novo e preencha uma linha com a mesma estrutura. Antes de editar, releia a linha atual e modifique apenas os campos pedidos. As colunas legíveis prevalecem sobre os metadados na leitura do aplicativo.
 
@@ -30,3 +30,18 @@ Referências oficiais:
 
 - https://developers.google.com/identity/oauth2/web/guides/use-token-model
 - https://developers.google.com/workspace/sheets/api/quickstart/js
+
+## Miniaturas
+
+Dependência: `python -m pip install -r scripts/requirements.txt`.
+
+```sh
+python scripts/gerar_thumbs.py --input /privado/receitas.json --output /privado/receitas-atualizadas.json --review /privado/revisar.json
+python scripts/gerar_thumbs.py --url 'https://www.instagram.com/reel/EXEMPLO/' --input /privado/receitas.json --output /privado/receitas-atualizadas.json --review /privado/revisar.json
+```
+
+O input pode ser uma lista de registros ou linhas da planilha. O script salva `thumbnail` e remove o campo antigo. Aplique somente J/N da saída após reler as linhas na planilha. Publique WebP e manifesto, nunca arquivos privados. Existing WebP válidos são preservados; somente faltantes são processados. Até três workers e pausa padrão de dois segundos entre requisições.
+
+Também aceita `--url LINK` sem input, para gerar uma capa nova e atualizar o manifesto. Uma receita com o mesmo link passa a encontrá-la ao abrir o catálogo; grave o caminho em J/N ao atualizar o registro. Se o acesso direto exigir sessão, obtenha a capa no navegador autorizado e use `--url LINK --cover-file /privado/capa.jpg` ou `--covers /privado/capas.json` (mapa link -> arquivo local/URL temporária). Nunca publique URLs assinadas, credenciais ou esse mapa. Não contorne verificações de acesso.
+
+Você pode pedir tudo pelo chat: “gere a thumb deste link e atualize a planilha”; não precisa rodar no seu computador. O site estático não consegue baixar capas automaticamente ao cadastrar, por isso o script acompanha o projeto. Links sem capa usam o fallback do estilo atual.

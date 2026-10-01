@@ -30,11 +30,11 @@ const RecipeCore = (() => {
       if (!i||typeof i.text!=='string'||!Array.isArray(i.names)||!i.names.length||i.names.some(n=>typeof n!=='string')) throw Error('Ingrediente inválido.');
       if(i.alternatives!==undefined&&(!Array.isArray(i.alternatives)||i.alternatives.some(a=>!Array.isArray(a)||!a.length||a.some(n=>typeof n!=='string')))) throw Error('Alternativas inválidas.');
     }
-    for(const k of ['steps','tags','warnings','images','import_notes']) {r[k]??=[];if(!Array.isArray(r[k])||r[k].some(s=>typeof s!=='string'))throw Error('Campo inválido: '+k);}
+    for(const k of ['steps','tags','warnings','import_notes']) {r[k]??=[];if(!Array.isArray(r[k])||r[k].some(s=>typeof s!=='string'))throw Error('Campo inválido: '+k);}
     r.source_url=String(r.source_url||'');
     if(r.source_url&&!/^https?:\/\//i.test(r.source_url))throw Error('Use um link http ou https.');
-    // Personal images may be embedded in a portable backup, never fetched remotely.
-    if(r.images.some(x=>!/^[-\w]{10,}$/.test(x)))throw Error('Identificador de foto inválido.');
+    r.thumbnail=String(r.thumbnail||'');
+    if(r.thumbnail&&!/^assets\/thumbs\/[a-f0-9]{64}\.webp$/.test(r.thumbnail))throw Error('Caminho de miniatura inválido.');
     r.id=String(r.id||crypto.randomUUID());
     if(r.reviewed)r.warnings=[...(!r.ingredients.length?['Ingredientes não informados.']:[]),...(!r.steps.length?['Modo de preparo não informado.']:[])];
     if(JSON.stringify(r).length>20000000)throw Error('Receita grande demais.');
@@ -62,7 +62,7 @@ const RecipeCore = (() => {
     const ih=s=>/^(ingredientes|ingredients)\b/.test(norm(s).replace(/^[^a-z]+/,''));
     const sh=s=>/^(modo de preparo|modo de fazer|preparo|preparacao|instrucoes|instructions|method|directions)\s*:?$/.test(norm(s));
     if(!title&&!ih(lines[0])&&!sh(lines[0])&&!/^[\d•*-]/.test(lines[0]))title=lines.shift();
-    const r={title:title||'Receita sem título',ingredients:[],steps:[],original:text,tags:[],images:[],warnings:[],reviewed:false,favorite:false,source_url:''};
+    const r={title:title||'Receita sem título',ingredients:[],steps:[],original:text,tags:[],thumbnail:'',warnings:[],reviewed:false,favorite:false,source_url:''};
     let mode='', section='';
     for(const raw of lines) {
       const line=raw.replace(/^[•*–-]\s*/,'');

@@ -1,6 +1,7 @@
 const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict'),crypto=require('node:crypto');
 let rows,writes=0,fail=0;const events=[];
-const context=vm.createContext({console,structuredClone,crypto,URL,Blob,Event,setTimeout,window:{RECIPE_CONFIG:{clientId:'test-client',spreadsheetId:'test-sheet'},dispatchEvent:e=>events.push(e.type)},google:{accounts:{oauth2:{initTokenClient:opts=>({requestAccessToken:()=>opts.callback({access_token:'test-token',expires_in:3600})})}}},fetch:async(url,options={})=>{
+const context=vm.createContext({console,structuredClone,crypto:crypto.webcrypto,TextEncoder,URL,Blob,Event,setTimeout,window:{RECIPE_CONFIG:{clientId:'test-client',spreadsheetId:'test-sheet'},dispatchEvent:e=>events.push(e.type)},google:{accounts:{oauth2:{initTokenClient:opts=>({requestAccessToken:()=>opts.callback({access_token:'test-token',expires_in:3600})})}}},fetch:async(url,options={})=>{
+ if(url==='./assets/thumbs/manifest.json')return {ok:true,json:async()=>({})};
  if(url==='./groups.json')return {ok:true,json:async()=>JSON.parse(fs.readFileSync(__dirname+'/../groups.json'))};
  assert.equal(options.headers.Authorization,'Bearer test-token');assert(!url.includes('test-token'));
  if(fail)return {ok:false,status:fail};
@@ -8,11 +9,11 @@ const context=vm.createContext({console,structuredClone,crypto,URL,Blob,Event,se
  return {ok:true,json:async()=>({values:structuredClone(rows)})};
 }});
 context.window.google=context.google;
-vm.runInContext(fs.readFileSync(__dirname+'/../recipe-core.js','utf8')+'\n'+fs.readFileSync(__dirname+'/../google-store.js','utf8')+'\nthis.store=GoogleStore;this.core=RecipeCore;',context);
+vm.runInContext(fs.readFileSync(__dirname+'/../recipe-core.js','utf8')+'\n'+fs.readFileSync(__dirname+'/../thumbnails.js','utf8')+'\n'+fs.readFileSync(__dirname+'/../google-store.js','utf8')+'\nthis.store=GoogleStore;this.core=RecipeCore;',context);
 const api=(...args)=>context.store.api(...args);
 (async()=>{
  await context.core.ready;
- const base={id:'test-recipe',title:'Receita teste',ingredients:[{text:'2 ovos',names:['ovo'],optional:false,alternatives:[],recognized:true,section:''}],steps:['Bata.\nAsse.'],images:[],tags:[],warnings:[],original:'Texto original',import_notes:['Nota preservada'],reviewed:false};
+ const base={id:'test-recipe',title:'Receita teste',ingredients:[{text:'2 ovos',names:['ovo'],optional:false,alternatives:[],recognized:true,section:''}],steps:['Bata.\nAsse.'],thumbnail:'',tags:[],warnings:[],original:'Texto original',import_notes:['Nota preservada'],reviewed:false};
  rows=[context.store.HEADERS,context.store.encode(base)];
  await assert.rejects(api('/api/refresh'),/Entre com/);assert.equal(writes,0);
  await api('/api/login');let all=(await api('/api/refresh')).recipes;
