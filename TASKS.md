@@ -39,8 +39,25 @@ Testes de Python (lote, link individual e idempotência), JavaScript e Chromium 
 
 O login Google real não foi reconfirmado nesta sessão: a tela pública e o código foram inspecionados no navegador; o fluxo de autenticação e operações foi coberto pelos testes automatizados. As capturas usam o catálogo em memória, não uma sessão Google autenticada. A planilha foi verificada por releitura da API, sem conferência visual da grade nativa.
 
-Links privados/apagados, URLs ausentes ou incompletas, TikTok com verificação de acesso, YouTube com CDN inacessível neste ambiente e páginas sem capa receberam fallback. Os motivos por receita estão em revisar. Não houve tentativa de contornar verificações de acesso.
+Links privados/apagados, URLs ausentes ou incompletas, TikTok com verificação de acesso, páginas sem capa e fontes ainda não confirmadas receberam fallback. Os motivos por receita estão em revisar. Não houve tentativa de contornar verificações de acesso.
 
 ## Descobertas além do pedido
 
 Há origens apontando para produtos, acompanhamentos ou páginas diferentes da receita, além de links incompletos e caracteres invisíveis. Os links originais e os textos das receitas foram preservados. O script permite fornecer uma capa obtida manualmente para completar esses casos e não baixa novamente miniaturas válidas.
+
+## Segunda busca de capas
+
+- [x] Preservar código na branch `backup/pre-search-recovery-20261001` e duplicar a aba como Antes da segunda busca.
+- [x] Testar três capas oficiais do YouTube antes do lote.
+- [x] Pesquisar links e títulos pendentes, conferindo autores, ingredientes e preparo.
+- [x] Recuperar capas das páginas originais, catálogo público do autor e publicações equivalentes do mesmo autor.
+- [x] Gerar WebP local e preservar links e conteúdo das receitas.
+- [x] Testar lote, link individual, idempotência e persistência da origem confirmada na planilha.
+- [ ] Publicar, aplicar J/N, reler e conferir visualmente desktop/celular.
+- [ ] Entregar relatórios privados de recuperadas e pendências e capturas.
+
+Resultado desta busca: 65 novas capas; 94 de 160 receitas com thumb, 66 fallbacks. Imagens locais: 3.267.052 bytes. Nenhum arquivo antigo adicional removido. O método anterior já tinha sido retirado na primeira migração. As imagens assinadas do Instagram foram baixadas; nenhuma URL temporária é usada no card.
+
+Buscas nos índices públicos localizaram fontes que a leitura direta não alcançava. O servidor oficial img.youtube.com funcionou para os vídeos originais. Catálogo Roti, páginas Panelinha e Lena Mattar e publicações correspondentes dos próprios autores permitiram recuperar outras capas. Receitas com origem ausente ou incorreta ganharam referência de proveniência somente nos metadados. As demais mantêm fallback; imagens de receitas diferentes foram rejeitadas.
+
+Não confirmado nesta passagem: obtenção das imagens de três receitas de Brian Lagerstrom cujas páginas foram identificadas. O download direto retornou 403 neste ambiente; uma imagem abriu no navegador, mas o download de mídia não produziu arquivo. Também não foi possível confirmar capas das demais pendências por link ou título. O relatório privado registra esses motivos.

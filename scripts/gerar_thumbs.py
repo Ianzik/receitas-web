@@ -14,6 +14,11 @@ def canonical(url):
  if p.scheme not in ('http','https') or not p.hostname:raise ValueError('Sem link de origem válido')
  q=[] if p.hostname.lower().endswith('instagram.com') else [(k,v) for k,v in parse_qsl(p.query) if not k.lower().startswith('utm_') and k not in ('igshid','fbclid')]
  return urlunsplit((p.scheme.lower(),p.netloc.lower(),p.path or '/',urlencode(q),''))
+def youtube_cover(url):
+ p=urlsplit(url);host=(p.hostname or '').lower()
+ video=dict(parse_qsl(p.query)).get('v','') if host in ('youtube.com','www.youtube.com','m.youtube.com') else p.path.strip('/') if host=='youtu.be' else ''
+ if not video and host in ('youtube.com','www.youtube.com','m.youtube.com') and p.path.startswith(('/shorts/','/embed/')):video=p.path.split('/')[2]
+ return 'https://img.youtube.com/vi/'+video+'/hqdefault.jpg' if re.fullmatch(r'[A-Za-z0-9_-]{11}',video) else ''
 def key(url):return hashlib.sha256(canonical(url).encode()).hexdigest()
 def read(url,delay):
  global next_request
@@ -48,7 +53,7 @@ def generate(url,root,covers,delay,skips):
    with Image.open(target) as im:
     if im.format=='WEBP' and im.width*9==im.height*16 and target.stat().st_size<LIMIT:return {'thumbnail':relative,'status':'existing','bytes':target.stat().st_size}
   except Exception:pass
- cover=covers.get(url) or covers.get(canonical(url))
+ cover=covers.get(url) or covers.get(canonical(url)) or youtube_cover(url)
  if not cover and urlsplit(url).hostname in skips:raise ValueError('Origem com restrição de acesso constatada na execução anterior; não contornada')
  if cover and not cover.startswith(('https://','http://')):data=Path(cover).read_bytes()
  else:
@@ -63,12 +68,16 @@ def generate(url,root,covers,delay,skips):
   data,_,mime=read(cover,delay)
   if not mime.startswith('image/'):
    raise ValueError('Capa retornou '+mime+' em vez de imagem'+(' (Site Unavailable neste ambiente)' if b'Site Unavailable' in data else ''))
+ if youtube_cover(url):
+  with Image.open(io.BytesIO(data)) as im:
+   if im.width<320 or im.height<180:raise ValueError('YouTube retornou placeholder de vídeo indisponível')
  return {'thumbnail':relative,'status':'generated','bytes':save_webp(data,target)}
 def write(path,value):
  path=Path(path);path.parent.mkdir(parents=True,exist_ok=True);tmp=path.with_suffix(path.suffix+'.tmp');tmp.write_text(json.dumps(value,ensure_ascii=False,indent=2)+'\n');tmp.replace(path)
 def main():
  ap=argparse.ArgumentParser(description=__doc__)
  ap.add_argument('--input',type=Path);ap.add_argument('--output',type=Path);ap.add_argument('--url');ap.add_argument('--cover-file');ap.add_argument('--covers',type=Path)
+ ap.add_argument('--sources',type=Path,help='Mapa privado ID → página original conferida, para origens ausentes ou incorretas')
  ap.add_argument('--review',type=Path,default=Path('revisar.json'));ap.add_argument('--root',type=Path,default=ROOT);ap.add_argument('--workers',type=int,choices=(1,2,3),default=3);ap.add_argument('--delay',type=float,default=2)
  ap.add_argument('--skip-domains',default='',help='Domínios já verificados como bloqueados nesta execução; gera fallback sem insistir')
  a=ap.parse_args()
@@ -77,12 +86,14 @@ def main():
  if a.cover_file and not a.url:ap.error('--cover-file exige --url')
  if a.delay<1:ap.error('Pausa mínima: um segundo')
  data=json.loads(a.input.read_text()) if a.input else [];sheet=bool(data and isinstance(data[0],list))
- records=[{'id':r[10],'title':r[0],'source_url':r[6]} for r in data[1:] if r[0] and not r[14]] if sheet else data
+ sources=json.loads(a.sources.read_text()) if a.sources else {}
+ records=[{'id':r[10],'title':r[0],'source_url':r[6],'thumbnail_source_url':json.loads(r[13] or '{}').get('thumbnail_source_url','')} for r in data[1:] if r[0] and not r[14]] if sheet else data
+ def effective(r):return r.get('source_url','') or sources.get(r.get('id',''),'') or r.get('thumbnail_source_url','')
  def matches(url):
   if not a.url:return True
   try:return canonical(url)==canonical(a.url)
   except ValueError:return url==a.url
- urls=list(dict.fromkeys([a.url] if a.url else [r.get('source_url','') for r in records if r.get('source_url')]))
+ urls=list(dict.fromkeys([a.url] if a.url else [effective(r) for r in records if effective(r)]))
  groups={};aliases={}
  for url in urls:
   try:identity=canonical(url)
@@ -104,14 +115,19 @@ def main():
   return results.get(identity,{'thumbnail':'','status':'failed','reason':'Sem link de origem'})
  review=[]
  for r in records:
-  if not matches(r.get('source_url','')):continue
-  result=outcome(r.get('source_url',''));r.pop('images',None);r['thumbnail']=result['thumbnail']
+  if not matches(effective(r)):continue
+  result=outcome(effective(r));r.pop('images',None);r['thumbnail']=result['thumbnail']
+  if r.get('id') in sources:r['thumbnail_source_url']=sources[r['id']]
   if not r['thumbnail']:review.append({'id':r.get('id',''),'title':r.get('title',''),'url':r.get('source_url',''),'reason':result['reason']})
  if sheet:
   data[0][9]='Thumb local'
   for r in data[1:]:
-   if not r[0] or not matches(r[6]):continue
-   result=outcome(r[6]);meta=json.loads(r[13] or '{}');meta.pop('images',None);meta['thumbnail']=result['thumbnail'];r[9]=result['thumbnail'];r[13]=json.dumps(meta,ensure_ascii=False,separators=(',',':'))
+   if not r[0]:continue
+   meta=json.loads(r[13] or '{}');url=r[6] or sources.get(r[10],'') or meta.get('thumbnail_source_url','')
+   if not matches(url):continue
+   result=outcome(url);
+   if r[10] in sources:meta['thumbnail_source_url']=sources[r[10]]
+   meta.pop('images',None);meta['thumbnail']=result['thumbnail'];r[9]=result['thumbnail'];r[13]=json.dumps(meta,ensure_ascii=False,separators=(',',':'))
  if a.output:write(a.output,data)
  if a.url and not records and not outcome(a.url)['thumbnail']:review.append({'url':a.url,'reason':outcome(a.url)['reason']})
  write(a.review,review)
