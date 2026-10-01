@@ -13,9 +13,9 @@ Código preservado na branch `backup/pre-thumbnails-20260930`, commit `d522c9efc
 - [x] Mapear método atual e fazer backup.
 - [x] Definir solução e testar três links antes do lote.
 - [x] Implementar script idempotente para lote e link individual.
-- [ ] Migrar dados e gerar todas as miniaturas possíveis.
-- [ ] Remover método antigo e verificar todas as telas.
-- [ ] Testar execução e conferir desktop/celular com fallback; entregar capturas e revisar.
+- [x] Migrar dados e gerar todas as miniaturas possíveis.
+- [x] Remover método antigo e verificar todas as telas.
+- [x] Testar execução e conferir desktop/celular com fallback; entregar capturas e revisar.
 
 ## Solução
 
@@ -27,6 +27,20 @@ WebP local em 16:9, até 640×360 e abaixo de 60 KB. Caminho `thumbnail` em J/N 
 - Campo images nos registros ativos, leitura de arquivos do Drive, fila/observer de fotos, blobs e escopo Drive no login.
 - As 22 imagens antigas serão apenas arquivadas no backup privado (14.324.166 bytes), sem exclusão definitiva. Não há imagem antiga a apagar do repositório.
 
-## Estado da execução
+## Resultado e verificação
 
-A primeira execução foi interrompida antes da publicação. Backups foram recuperados; o site e a planilha de receitas permaneciam intactos. Implementação e artefatos estão sendo reconstruídos e salvos em commits por etapa.
+Publicado no GitHub Pages pela PR #4. 160 receitas ativas processadas, 109 links únicos: 29 miniaturas locais e 131 fallbacks. Instagram: 15 capas obtidas de 16 links; o restante estava indisponível. WebP: 883.784 bytes no total, cada arquivo abaixo de 60 KB. Fotos anteriores: 14.324.166 bytes, preservadas em backup; 1 arquivo de código removido (`browser-store.js`) e 22 fotos arquivadas, nenhuma foto excluída definitivamente.
+
+Planilha: J virou Thumb local; caminhos e metadados foram gravados e relidos. Todas as demais células foram comparadas com o estado anterior e permaneceram iguais. O campo images foi retirado dos metadados. Busca, favoritos, detalhe, cache e importação usam somente thumbnail; meta tags não dependiam das fotos antigas.
+
+Testes de Python (lote, link individual e idempotência), JavaScript e Chromium passaram no GitHub Actions. Publicação do Pages confirmada. Conferência visual do código publicado em 1280 px e 390 px, com o catálogo privado carregado somente na memória do navegador: 160 cards, 29 imagens locais e 131 placeholders, sem overflow horizontal no celular. Capturas e arquivo revisar com motivos entregues privadamente. O catálogo e o relatório de links não foram publicados no repositório.
+
+## Limitações explicitamente não confirmadas
+
+O login Google real não foi reconfirmado nesta sessão: a tela pública e o código foram inspecionados no navegador; o fluxo de autenticação e operações foi coberto pelos testes automatizados. As capturas usam o catálogo em memória, não uma sessão Google autenticada. A planilha foi verificada por releitura da API, sem conferência visual da grade nativa.
+
+Links privados/apagados, URLs ausentes ou incompletas, TikTok com verificação de acesso, YouTube com CDN inacessível neste ambiente e páginas sem capa receberam fallback. Os motivos por receita estão em revisar. Não houve tentativa de contornar verificações de acesso.
+
+## Descobertas além do pedido
+
+Há origens apontando para produtos, acompanhamentos ou páginas diferentes da receita, além de links incompletos e caracteres invisíveis. Os links originais e os textos das receitas foram preservados. O script permite fornecer uma capa obtida manualmente para completar esses casos e não baixa novamente miniaturas válidas.
